@@ -30,6 +30,7 @@ app.post("/run-code", async (req: Request, res: Response) => {
 
     const { code } = req.body;
 
+
     try {
 
         const response = await axios.post<Judge0SubmissionResponse>(
@@ -50,13 +51,14 @@ app.post("/run-code", async (req: Request, res: Response) => {
                 },
                 headers: {
                     "content-type": "application/json",
-                    "X-RapidAPI-Key": process.env.RAPID_API_KEY,
-                    "X-RapidAPI-Host": process.env.RAPID_API_HOST,
+                    "X-RapidAPI-Key": RAPIDAPI_KEY,
+                    "X-RapidAPI-Host": RAPIDAPI_HOST,
                 },
             }
         );;
 
         const token = response.data.token;
+        
         res.status(200).json({ token });
 
     } catch (error: any) {
