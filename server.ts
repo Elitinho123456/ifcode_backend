@@ -33,6 +33,7 @@ app.post("/run-code", async (req: Request, res: Response) => {
 
     try {
 
+
         const response = await axios.post<Judge0SubmissionResponse>(
             "https://judge0.p.rapidapi.com/submissions",
             {
@@ -61,6 +62,7 @@ app.post("/run-code", async (req: Request, res: Response) => {
         
         res.status(200).json({ token });
 
+
     } catch (error: any) {
 
         console.error('Erro ao enviar submissão ao Judge0:', error.response?.data || error.message);
@@ -76,6 +78,7 @@ app.post("/run-code", async (req: Request, res: Response) => {
 app.get('/submission-result/:token', async (req: Request, res: Response) => {
 
     const { token } = req.params;
+    console.log(token)
 
     try {
 
@@ -83,7 +86,10 @@ app.get('/submission-result/:token', async (req: Request, res: Response) => {
 
             method: 'GET',
             url: `${JUDGE0_API_URL}/submissions/${token}`,
-            params: { base64_encoded: 'false', fields: '*' },
+            params: {
+                base64_encoded: "true",
+                fields: "*"
+            },
             headers: {
                 'X-RapidAPI-Key': RAPIDAPI_KEY,
                 'X-RapidAPI-Host': RAPIDAPI_HOST,
@@ -93,6 +99,7 @@ app.get('/submission-result/:token', async (req: Request, res: Response) => {
 
         const judge0Response = await axios.request(options);
         res.status(200).json(judge0Response.data);
+        console.log(judge0Response)
 
     } catch (error: any) {
 
