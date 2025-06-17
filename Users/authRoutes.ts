@@ -1,80 +1,91 @@
 import { Router, Request, Response } from 'express';
-import axios from 'axios';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import pool from '../DataBase/db';
 
 const router = Router();
+const saltRounds = 10;
+const jwtSecret = process.env.JWT_SECRET || 'your_jwt_secret';
 
-const JUDGE0_API_URL = process.env.JUDGE0_API_URL;
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST;
+// Rota de Registro
+router.post('/register', async (req: Request, res: Response) => {
 
-interface Judge0SubmissionResponse {
-    token: string;
-}
+    const { username, email, password } = req.body; // Desestruturação do corpo da requisição
 
-// Endpoint para compilar e executar o código
-router.post("/run-code", async (req: Request, res: Response) => {
+    if (!username || !email || !password) { // Verifica se todos os campos estão preenchidos
+        
+        // Se algum campo estiver vazio, retorna um erro 400
+        res.status(400).json({ message: 'Todos os campos são obrigatórios' });
+        return;
 
-    const { code } = req.body;
+    }
 
     try {
-        const response = await axios.post<Judge0SubmissionResponse>(
-            `${JUDGE0_API_URL}/submissions`,
-            {
-                source_code: code,
-                language_id: 63, // JavaScript
-                stdin: '',
-                expected_output: null,
-                cpu_time_limit: 2,
-                memory_limit: 128000
-            },
-            {
-                headers: {
-                    'X-RapidAPI-Key': RAPIDAPI_KEY,
-                    'X-RapidAPI-Host': RAPIDAPI_HOST,
-                    'Content-Type': 'application/json'
-                }
-            }
+
+        const hashedPassword = await bcrypt.hash(password, saltRounds); // Criptografa a senha
+        
+        // Verifica se o usuário já existe
+        const [result] = await pool.query(
+
+            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
+            [username, email, hashedPassword]
+
         );
 
-        res.status(200).json({ token: response.data.token });
+        res.status(201).json({ message: 'Usuário criado com sucesso' });
 
-    } catch (error: any) {
-        console.error('Erro ao enviar submissão ao Judge0:', error.response?.data || error.message);
-        res.status(500).json({
-            error: 'Erro ao processar a submissão',
-            details: error.response?.data || error.message
-        });
+    } catch (error) {
+
+        console.error(error);
+        res.status(500).json({ message: 'Erro ao registrar usuário' });
+
     }
+
 });
 
-// Endpoint para buscar o resultado da submissão
-router.get('/submission-result/:token', async (req: Request, res: Response) => {
-    const { token } = req.params;
+// Rota de Login
+router.post('/login', async (req: Request, res: Response) => {
+
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+
+        res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
+        return;
+
+    }
 
     try {
-        const options = {
-            method: 'GET',
-            url: `${JUDGE0_API_URL}/submissions/${token}`,
-            params: {
-                base64_encoded: "true",
-                fields: "*"
-            },
-            headers: {
-                'X-RapidAPI-Key': RAPIDAPI_KEY,
-                'X-RapidAPI-Host': RAPIDAPI_HOST,
-            }
-        };
+        // Verifica se o usuário existe
+        const [rows]: any = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
 
-        const judge0Response = await axios.request(options);
-        res.status(200).json(judge0Response.data);
+        if (rows.length === 0) { // Se não encontrar o usuário, retorna um erro 401
 
-    } catch (error: any) {
-        console.error('Erro ao buscar resultado do Judge0:', error.response?.data || error.message);
-        res.status(500).json({
-            error: 'Erro ao buscar o resultado da submissão',
-            details: error.response?.data || error.message
-        });
+            res.status(401).json({ message: 'Usuário ou senha inválidos' });
+
+        }
+
+        const user = rows[0];
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash); // Compara a senha fornecida com a senha criptografada no banco de dados
+
+        if (!isPasswordValid) { // Se a senha não for válida, retorna um erro 401
+
+            res.status(401).json({ message: 'Usuário ou senha inválidos' });
+            return;
+
+        }
+
+        const token = jwt.sign({ id: user.id, username: user.username }, jwtSecret, { expiresIn: '1h' }); // Gera um token JWT com o ID e o nome de usuário do usuário, com validade de 1 hora
+
+        res.status(200).json({ token });
+
+    } catch (error) {
+
+        console.error(error);
+        res.status(500).json({ message: 'Erro ao fazer login' });
+
     }
+
 });
 
 export default router;

@@ -52,6 +52,7 @@ router.get('/submission-result/:token', async (req: Request, res: Response) => {
     const { token } = req.params;
 
     try {
+        
         const options = {
             method: 'GET',
             url: `${JUDGE0_API_URL}/submissions/${token}`,
@@ -65,15 +66,31 @@ router.get('/submission-result/:token', async (req: Request, res: Response) => {
             }
         };
 
-        const judge0Response = await axios.request(options);
-        res.status(200).json(judge0Response.data);
+        const judge0Response = await axios.request(options); // Faz a requisição para o Judge0 API
+
+        // Defina o tipo esperado da resposta do Judge0
+        interface Judge0Result {
+            status: {
+                id: number;
+                [key: string]: any;
+            };
+            [key: string]: any;
+        }
+        const data = judge0Response.data as Judge0Result;
+
+        if (data.status.id !== 3) { // Verifica se o status é "Compilado com sucesso"
+            res.status(200).json(data);
+        }
 
     } catch (error: any) {
+
         console.error('Erro ao buscar resultado do Judge0:', error.response?.data || error.message);
+
         res.status(500).json({
             error: 'Erro ao buscar o resultado da submissão',
             details: error.response?.data || error.message
         });
+
     }
 });
 
