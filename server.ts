@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import authRoutes from './Users/authRoutes';
-import codeRoutes from './Users/codeRoutes';
-import tarefaRoutes from './Users/tarefaRoutes';
+import authRoutes from './Routes/authRoutes';
+import codeRoutes from './Routes/codeRoutes';
+import tarefaRoutes from './Routes/tarefaRoutes';
 
 dotenv.config();
 
