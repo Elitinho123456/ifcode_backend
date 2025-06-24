@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import pool from '../DataBase/db';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware'; 
 
 const router = Router();
 
@@ -53,34 +54,29 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // Rota para marcar uma tarefa como concluída
-router.patch('/:id/concluir', async (req: Request, res: Response) => {
+router.patch('/:id/concluir', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    
+    const { id } = req.params; // ID da tarefa
+    const { stdinput } = req.body; // Apenas o código enviado pelo usuário é necessário no corpo
+    
+    // 2. Obtemos o nome de usuário diretamente do token JWT, que é mais seguro.
+    const autorUsername = req.user!.username; 
 
-    const { id } = req.params; // Obtém o ID da tarefa a partir dos parâmetros da rota
-    const { autor, stdinput } = req.body; // Desestruturação do corpo da requisição
-
-    if (!autor || !stdinput) { // Verifica se o autor e o input do código estão preenchidos
-
-        res.status(400).json({ message: 'Nome do autor e input do código são obrigatórios.' });
+    if (!stdinput) { // Verifica se o input do código está preenchido
+        res.status(400).json({ message: 'O código da solução é obrigatório.' });
         return;
-
     }
 
-    try { // Atualiza a tarefa para marcá-la como concluída
-
+    try {
         await pool.query(
             'UPDATE tarefas SET concluida = TRUE, dataConclusao = CURRENT_TIMESTAMP, autor = ?, stdinput = ? WHERE id = ?',
-            [autor, stdinput, id]
+            [autorUsername, stdinput, id]
         );
-
         res.status(200).json({ message: 'Tarefa concluída com sucesso!' });
-
     } catch (error) {
-
         console.error('Erro ao concluir tarefa:', error);
         res.status(500).json({ message: 'Erro interno no servidor' });
-
     }
-    
 });
 
 export default router;
