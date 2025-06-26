@@ -1,27 +1,30 @@
 // src/Routes/userRoutes.ts
 import { Router, Request, Response } from 'express';
-import pool from '../DataBase/db';
-import bcrypt from 'bcrypt';
-import { authenticateToken, AuthenticatedRequest} from '../middleware/authMiddleware';
+import pool from '../DataBase/db'; // Conexão com o banco de dados
+import bcrypt from 'bcrypt'; // Biblioteca para hash de senhas
+import { authenticateToken, AuthenticatedRequest} from '../middleware/authMiddleware'; // Middleware para autenticação de token JWT
+import upload from '../middleware/uploadMiddleware'; // Middleware para upload de arquivos
 
 const router = Router();
 const saltRounds = 10;
 
-// Estendendo a interface Request para incluir a propriedade 'user'
-
 // ROTA PARA BUSCAR DADOS DO PERFIL
 router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+
     try {
+        // Busca os dados do usuário autenticado
         const [rows]: any = await pool.query(
             'SELECT id, username, email, displayedName, phone FROM users WHERE id = ?',
             [req.user!.id]
         );
 
+        // Se não encontrar o usuário, retorna 404
         if (rows.length === 0) {
             res.status(404).json({ message: 'Usuário não encontrado.' });
             return;
         }
 
+        // Se encontrar, retorna os dados do usuário
         const user = rows[0];
         // Ocultamos dados sensíveis por padrão no retorno
         res.status(200).json({
@@ -90,5 +93,39 @@ router.put('/profile/update-password', authenticateToken, async (req: Authentica
         res.status(500).json({ message: 'Erro interno no servidor.' });
     }
 });
+
+
+// ROTA PARA UPLOAD DA FOTO DE PERFIL
+// Esta rota permite que o usuário faça upload de uma foto de perfil
+router.post('/profile/upload-picture', authenticateToken, upload.single('profilePicture'), async (req: AuthenticatedRequest, res: Response) => {
+
+    if (!req.file) {
+        res.status(400).json({ message: 'Nenhum arquivo foi enviado.' });
+        return;
+    }
+
+    try {
+
+        // O caminho do arquivo é relativo à pasta 'public'
+        const imageUrl = `/uploads/avatars/${req.file.filename}`;
+
+        // Atualiza a URL da foto de perfil no banco de dados
+        await pool.query(
+            'UPDATE users SET profilePictureUrl = ? WHERE id = ?',
+            [imageUrl, req.user!.id]
+        );
+
+        // Retorna a URL da nova imagem para o frontend
+        res.status(200).json({
+            message: 'Foto de perfil atualizada com sucesso!',
+            profilePictureUrl: imageUrl
+        });
+
+    } catch (error) {
+        console.error('Erro ao fazer upload da foto de perfil:', error);
+        res.status(500).json({ message: 'Erro interno no servidor ao salvar a foto.' });
+    }
+});
+
 
 export default router;
