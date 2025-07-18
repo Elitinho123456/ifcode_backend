@@ -29,5 +29,3 @@ CREATE TABLE
         stdinput TEXT,
         stdoutput TEXT NOT NULL
     );
-
-drop database codespace
