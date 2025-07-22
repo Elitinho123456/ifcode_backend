@@ -10,10 +10,10 @@ const jwtSecret = process.env.JWT_SECRET || 'your_jwt_secret';
 // Rota de Registro
 router.post('/register', async (req: Request, res: Response) => {
 
-    const { username, email, password } = req.body; // Desestruturação do corpo da requisição
+    const { username, email, password, phone } = req.body; // Desestruturação do corpo da requisição
 
-    if (!username || !email || !password) { // Verifica se todos os campos estão preenchidos
-        
+    if (!username || !email || !password || !phone) { // Verifica se todos os campos estão preenchidos
+
         // Se algum campo estiver vazio, retorna um erro 400
         res.status(400).json({ message: 'Todos os campos são obrigatórios' });
         return;
@@ -23,12 +23,12 @@ router.post('/register', async (req: Request, res: Response) => {
     try {
 
         const hashedPassword = await bcrypt.hash(password, saltRounds); // Criptografa a senha
-        
-        // Verifica se o usuário já existe
+
+        // Insere o novo usuário no banco de dados
         const [result] = await pool.query(
 
-            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-            [username, email, hashedPassword]
+            'INSERT INTO users (username, email, password_hash, phone, displayedName) VALUES (?, ?, ?, ?, ?)',
+            [username, email, hashedPassword, phone, username]
 
         );
 
