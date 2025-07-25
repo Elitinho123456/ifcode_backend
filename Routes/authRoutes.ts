@@ -62,6 +62,7 @@ router.post('/login', async (req: Request, res: Response) => {
         if (rows.length === 0) { // Se não encontrar o usuário, retorna um erro 401
 
             res.status(401).json({ message: 'Usuário ou senha inválidos' });
+            return;
 
         }
 
@@ -83,7 +84,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
         console.error(error);
         res.status(500).json({ message: 'Erro ao fazer login' });
-
+        return;
     }
 
 });

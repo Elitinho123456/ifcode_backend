@@ -1,9 +1,10 @@
 // src/Routes/userRoutes.ts
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import pool from '../DataBase/db'; // Conexão com o banco de dados
 import bcrypt from 'bcrypt'; // Biblioteca para hash de senhas
 import { authenticateToken, AuthenticatedRequest} from '../middleware/authMiddleware'; // Middleware para autenticação de token JWT
 import upload from '../middleware/uploadMiddleware'; // Middleware para upload de arquivos
+import { uploadAvatar } from '../Controllers/userController'
 
 const router = Router();
 const saltRounds = 10;
@@ -14,7 +15,8 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
     try {
         // Busca os dados do usuário autenticado
         const [rows]: any = await pool.query(
-            'SELECT id, username, email, displayedName, phone FROM users WHERE id = ?',
+            // FIX: Add profilePictureUrl to the SELECT statement
+            'SELECT id, username, email, displayedName, phone, profilePictureUrl FROM users WHERE id = ?',
             [req.user!.id]
         );
 
@@ -127,5 +129,6 @@ router.post('/profile/upload-picture', authenticateToken, upload.single('profile
     }
 });
 
+router.put('/avatar', authenticateToken, upload.single('avatar'), uploadAvatar);
 
 export default router;

@@ -6,6 +6,8 @@ services:
       - "5001:5001"
     depends_on:
       - db
+    volumes:
+      - ./public/uploads:/app/public/uploads
 
   db:
     image: mysql:latest
